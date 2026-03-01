@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔍 Multi‑Scale Feature Detection and Matching Using OpenCV
+#  Multi‑Scale Feature Detection and Matching Using OpenCV
 
 ### A modular, research-grade pipeline for panoramic image stitching
 ### using SURF / SIFT feature detection with RANSAC homography estimation
@@ -15,7 +15,7 @@
 
 ---
 
-## 📌 Table of Contents
+##  Table of Contents
 
 - [Overview](#-overview)
 - [Key Takeaways](#-key-takeaways)
@@ -33,7 +33,7 @@
 
 ---
 
-## 🧭 Overview
+##  Overview
 
 This project implements a complete **multi-scale feature detection and panoramic image stitching** pipeline using OpenCV. It supports two operational modes:
 
@@ -46,7 +46,7 @@ The custom pipeline exposes every stage — feature extraction, matching, homogr
 
 ---
 
-## 💡 Key Takeaways
+##  Key Takeaways
 
 > What this project taught about building real vision systems:
 
@@ -59,24 +59,24 @@ The custom pipeline exposes every stage — feature extraction, matching, homogr
 
 ---
 
-## ✨ Features
+##  Features
 
 | Stage | What It Does |
 |-------|--------------|
-| 🧩 **Feature Extraction** | SURF (fast, illumination-robust) with auto-fallback to SIFT |
-| 🔭 **Scale Adaptivity** | Multi-octave Gaussian pyramid for robust detection across zoom levels |
-| 🔗 **Feature Matching** | Brute-Force or FLANN with Lowe's ratio test (configurable threshold) |
-| 🎯 **Outlier Rejection** | RANSAC homography estimation with inlier ratio filtering |
-| 🖼️ **Perspective Warping** | Automatic canvas sizing with black-border cropping |
-| 🎨 **Seam Blending** | Feather (Gaussian) or multi-band Laplacian pyramid blending |
-| 🛠️ **Debug Mode** | Saves keypoint visualisations and match overlays to disk |
-| 📐 **Auto Resize** | Downscales large phone photos before processing to prevent OOM |
+|  **Feature Extraction** | SURF (fast, illumination-robust) with auto-fallback to SIFT |
+|  **Scale Adaptivity** | Multi-octave Gaussian pyramid for robust detection across zoom levels |
+|  **Feature Matching** | Brute-Force or FLANN with Lowe's ratio test (configurable threshold) |
+|  **Outlier Rejection** | RANSAC homography estimation with inlier ratio filtering |
+|  **Perspective Warping** | Automatic canvas sizing with black-border cropping |
+|  **Seam Blending** | Feather (Gaussian) or multi-band Laplacian pyramid blending |
+|  **Debug Mode** | Saves keypoint visualisations and match overlays to disk |
+|  **Auto Resize** | Downscales large phone photos before processing to prevent OOM |
 
 ---
 
-## 🖼️ Sample Inputs & Output
+##  Sample Inputs & Output
 
-### 📥 Input Images
+###  Input Images
 > Two overlapping images placed in the `samples/` folder, captured with ~40% overlap.
 
 ```
@@ -96,7 +96,7 @@ python stitch.py --input samples/img1.jpg samples/img2.jpg --output assets/panor
 
 ---
 
-### 🔑 Keypoint Detection
+###  Keypoint Detection
 > SIFT keypoints detected on both images — scale and orientation visualised (via `--debug`)
 
 | Image 1 Keypoints | Image 2 Keypoints |
@@ -105,14 +105,14 @@ python stitch.py --input samples/img1.jpg samples/img2.jpg --output assets/panor
 
 ---
 
-### 🔗 Feature Match Visualisation
+###  Feature Match Visualisation
 > Lowe's ratio-filtered matches between Image 1 and Image 2
 
 ![matches](assets/debug_matches.jpg)
 
 ---
 
-### 🌄 Final Stitched Output
+###  Final Stitched Output
 
 ![panorama](assets/panorama.jpg)
 
@@ -129,7 +129,7 @@ python stitch.py --input samples/img1.jpg samples/img2.jpg --output assets/panor
 
 ---
 
-## 🏗️ Project Structure
+##  Project Structure
 
 ```
 multi-scale-feature-detection/
@@ -155,27 +155,27 @@ multi-scale-feature-detection/
 
 ---
 
-## ⚙️ Installation
+##  Installation
 
 ### Prerequisites
 
 - Python **3.8+**
 - pip
 
-### 1️⃣ Clone the repository
+### 1️ Clone the repository
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/multi-scale-feature-detection.git
 cd multi-scale-feature-detection
 ```
 
-### 2️⃣ Install dependencies
+### 2️ Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3️⃣ (Optional) Enable SURF support
+### 3️ (Optional) Enable SURF support
 
 SURF is a **patented algorithm** and requires the non-free OpenCV modules:
 
@@ -184,11 +184,11 @@ pip uninstall opencv-python
 pip install opencv-contrib-python>=4.8.0
 ```
 
-> ℹ️ If SURF is unavailable, the pipeline automatically falls back to **SIFT** (open-source since OpenCV 4.4+).
+>  If SURF is unavailable, the pipeline automatically falls back to **SIFT** (open-source since OpenCV 4.4+).
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ```bash
 # Stitch all images in a folder
@@ -209,7 +209,7 @@ python stitch.py --input ./samples --output panorama.jpg --debug
 
 ---
 
-## 🖥️ CLI Reference
+##  CLI Reference
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -230,7 +230,7 @@ python stitch.py --input ./samples --output panorama.jpg --debug
 
 ---
 
-## 🐍 Python API
+##  Python API
 
 ### Basic usage
 
@@ -328,23 +328,23 @@ print(f"Inliers     : {hom_result.n_inliers} ({hom_result.inlier_ratio:.1%})")
   └────────────┬────────────┘
                │
                ▼
-         🌄 Panorama Output
+          Panorama Output
 ```
 
-### 🧬 SURF vs SIFT
+###  SURF vs SIFT
 
 | Property | SURF | SIFT |
 |----------|------|------|
-| ⚡ Speed | Faster (integral images) | Slower (DoG pyramid) |
-| 📐 Scale invariant | ✅ | ✅ |
-| 🔄 Rotation invariant | ✅ | ✅ |
-| 💡 Illumination robust | ✅ Strong | ✅ Good |
-| 📜 Licence | Non-free (patented) | Open (since OpenCV 4.4) |
-| 📏 Descriptor size | 64 floats | 128 floats |
+|  Speed | Faster (integral images) | Slower (DoG pyramid) |
+|  Scale invariant | ✅ | ✅ |
+|  Rotation invariant | ✅ | ✅ |
+|  Illumination robust | ✅ Strong | ✅ Good |
+|  Licence | Non-free (patented) | Open (since OpenCV 4.4) |
+|  Descriptor size | 64 floats | 128 floats |
 
 ---
 
-## 🧪 Running Tests
+##  Running Tests
 
 ```bash
 pip install pytest
@@ -356,29 +356,29 @@ pytest tests/ --cov=src --cov-report=term-missing
 ```
 
 **Coverage includes:**
-- ✅ Feature extractor — SIFT, AUTO fallback, grayscale input, invalid algorithm guard
-- ✅ Feature matcher — BF matching, empty descriptors, invalid method guard
-- ✅ RANSAC estimator — identity homography, too-few-matches failure path
-- ✅ Warper & blender — canvas sizing, feather blend, multi-band blend
-- ✅ Full pipeline — single image passthrough, two-image stitch, custom config
+-  Feature extractor — SIFT, AUTO fallback, grayscale input, invalid algorithm guard
+-  Feature matcher — BF matching, empty descriptors, invalid method guard
+-  RANSAC estimator — identity homography, too-few-matches failure path
+-  Warper & blender — canvas sizing, feather blend, multi-band blend
+-  Full pipeline — single image passthrough, two-image stitch, custom config
 
 ---
 
-## 💡 Tips for Best Results
+##  Tips for Best Results
 
 | Tip | Details |
 |-----|---------|
-| 📐 **Overlap** | Consecutive images should overlap by **30–50%** |
-| 💡 **Exposure** | Keep consistent exposure and white balance across all shots |
-| 🎯 **Camera motion** | Rotate around the nodal point — avoid lateral translation |
-| ↔️ **Ordering** | Pass images left-to-right (or top-to-bottom) in capture order |
-| 🔧 **Tuning** | Stitching failed? Lower `--hessian-threshold` or raise `--ratio-threshold` |
-| 📱 **Phone photos** | Use `--mode opencv` — handles bundle adjustment and parallax |
-| 🐛 **Debugging** | Use `--debug` to inspect keypoint and match quality visually |
+|  **Overlap** | Consecutive images should overlap by **30–50%** |
+|  **Exposure** | Keep consistent exposure and white balance across all shots |
+|  **Camera motion** | Rotate around the nodal point — avoid lateral translation |
+|  **Ordering** | Pass images left-to-right (or top-to-bottom) in capture order |
+|  **Tuning** | Stitching failed? Lower `--hessian-threshold` or raise `--ratio-threshold` |
+|  **Phone photos** | Use `--mode opencv` — handles bundle adjustment and parallax |
+|  **Debugging** | Use `--debug` to inspect keypoint and match quality visually |
 
 ---
 
-## 📄 License
+##  License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
@@ -386,8 +386,6 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 <div align="center">
 
-Made with ❤️ using Python & OpenCV
-
-⭐ **If this project helped you, consider giving it a star!**
+Made with ❤️ by [Aakash0817](https://github.com/Aakash0817)
 
 </div>
