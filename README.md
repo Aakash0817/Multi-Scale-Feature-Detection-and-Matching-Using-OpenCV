@@ -496,7 +496,3 @@ To get the best results from this pipeline:
   or raise `--ratio-threshold` to accept more matches.
 
 ---
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
