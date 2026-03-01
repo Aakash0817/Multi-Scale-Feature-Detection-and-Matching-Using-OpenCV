@@ -12,6 +12,7 @@ RANSAC-based homography estimation with cylindrical projection blending.
 - [Key Takeaways](#key-takeaways)
 - [Project Structure](#project-structure)
 - [Input Images](#input-images)
+- [Sample Results](#sample-results)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -122,6 +123,13 @@ Multi-Scale-Feature-Detection-OpenCV/
 
 Place your images inside the `samples` folder before running the script.
 
+**Input Sample Images:**
+
+| Image 1 (Left) | Image 2 (Right) |
+|:---:|:---:|
+| ![Sample 1](assets/sample_1.jpg) | ![Sample 2](assets/sample_2.jpg) |
+| `samples/IMG_1813.jpg` | `samples/IMG_1814.jpg` |
+
 **Folder layout:**
 
 ```
@@ -163,6 +171,38 @@ E:\Opencv project\
 |-- debug_matches.jpg        Matched keypoint pairs side by side
 `-- panorama.jpg             Final stitched output
 ```
+---
+
+## Sample Results
+
+### Output Panorama
+
+The two input images stitched into a single wide-angle panorama using
+cylindrical projection and SIFT feature matching:
+
+![Panorama Output](assets/panorama_output.jpg)
+
+---
+
+### Feature Detection — Keypoints
+
+SIFT detects keypoints at multiple scales across both images. Each circle
+represents a detected keypoint — the circle size indicates the scale at which
+it was detected, and the line inside shows orientation.
+
+| Keypoints — Image 1 | Keypoints — Image 2 |
+|:---:|:---:|
+| ![Keypoints 1](assets/debug_keypoints_1.jpg) | ![Keypoints 2](assets/debug_keypoints_2.jpg) |
+
+---
+
+### Feature Matching
+
+Lowe's ratio test filters raw descriptor matches, keeping only unambiguous
+correspondences. Lines connect matched keypoints between the two images.
+Matches crossing horizontally confirm the overlapping region used for alignment.
+
+![Feature Matches](assets/debug_matches.jpg)
 
 ---
 
