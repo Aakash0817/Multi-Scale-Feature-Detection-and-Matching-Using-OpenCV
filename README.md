@@ -1,393 +1,462 @@
-<div align="center">
+# Multi-Scale Feature Detection and Matching Using OpenCV
 
-# 🔍 Multi‑Scale Feature Detection and Matching Using OpenCV
-
-### A modular, research-grade pipeline for panoramic image stitching
-### using SURF / SIFT feature detection with RANSAC homography estimation
-
-[![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![OpenCV](https://img.shields.io/badge/OpenCV-4.8%2B-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)](https://opencv.org)
-[![NumPy](https://img.shields.io/badge/NumPy-1.24%2B-013243?style=for-the-badge&logo=numpy&logoColor=white)](https://numpy.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-pytest-orange?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
-
-</div>
+A modular, research-backed implementation of panoramic image stitching using
+SIFT/SURF multi-scale feature detection, Lowe's ratio test matching, and
+RANSAC-based homography estimation with cylindrical projection blending.
 
 ---
 
-## 📌 Table of Contents
+## Table of Contents
 
-- [Overview](#-overview)
-- [Key Takeaways](#-key-takeaways)
-- [Features](#-features)
-- [Sample Inputs & Output](#-sample-inputs--output)
-- [Project Structure](#-project-structure)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [CLI Reference](#️-cli-reference)
-- [Python API](#-python-api)
-- [Algorithm Deep Dive](#-algorithm-deep-dive)
-- [Running Tests](#-running-tests)
-- [Tips for Best Results](#-tips-for-best-results)
-- [License](#-license)
+- [Overview](#overview)
+- [Key Takeaways](#key-takeaways)
+- [Project Structure](#project-structure)
+- [Input Images](#input-images)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Pipeline Architecture](#pipeline-architecture)
+- [Algorithm Details](#algorithm-details)
+- [CLI Reference](#cli-reference)
+- [Configuration](#configuration)
+- [Shooting Tips](#shooting-tips)
+- [License](#license)
 
 ---
 
-## 🧭 Overview
+## Overview
 
-This project implements a complete **multi-scale feature detection and panoramic image stitching** pipeline using OpenCV. It supports two operational modes:
+This project implements a complete panoramic image stitching pipeline from
+scratch using OpenCV, structured as a reusable Python library with a
+command-line interface. The pipeline covers every stage of multi-scale
+feature detection — from keypoint extraction through to cylindrical
+projection, homography estimation, and seam blending.
+
+Two stitching modes are provided:
 
 | Mode | Description | Best For |
-|------|-------------|----------|
-| `--mode custom` | SIFT + RANSAC custom pipeline | Educational use, wide-FOV rotational shots |
-| `--mode opencv` | OpenCV built-in `cv2.Stitcher` | Phone photos, parallax scenes, production use |
-
-The custom pipeline exposes every stage — feature extraction, matching, homography estimation, warping, and blending — as independent, reusable Python modules.
+|---|---|---|
+| `custom` | SIFT + RANSAC pipeline (this codebase) | Educational use, rotational shots |
+| `opencv` | `cv2.Stitcher` wrapper | Production use, phone photos |
 
 ---
 
-## 💡 Key Takeaways
+## Key Takeaways
 
-> What this project taught about building real vision systems:
+**What was built and what was learned across this project:**
 
-- **Multi-scale is non-negotiable** — single-scale detectors break the moment image resolution or zoom changes. Gaussian pyramids are what make SURF/SIFT work reliably in the wild.
-- **Matching quality > quantity** — Lowe's ratio test filtering bad matches matters far more than the raw number of keypoints detected. A high inlier ratio after RANSAC is the true signal of a good match.
-- **RANSAC is the robustness layer** — without it, even a few wrong correspondences can wildly distort the homography. The min inlier ratio threshold is the single most important knob to tune.
-- **Blending is harder than stitching** — getting a geometrically correct panorama is step one. Getting a seamless one requires understanding frequency-domain blending (Laplacian pyramids) and seam placement.
-- **Production != research** — handling large phone photos (auto-resize), OOM prevention (canvas clamping), non-blocking I/O, and fault-tolerant pipelines are what separate a working system from a working notebook.
-- **Two modes for two realities** — the custom SIFT+RANSAC pipeline is transparent and educational; `cv2.Stitcher` handles bundle adjustment and exposure compensation automatically and is what you reach for in production.
+**Multi-Scale Feature Detection**
+SIFT and SURF detect keypoints across multiple scales using a Gaussian
+scale-space pyramid. This makes feature detection invariant to zoom, rotation,
+and moderate illumination changes — critical for real-world image stitching
+where no two shots are taken under identical conditions.
+
+**Why Ratio Test Filtering Matters**
+Applying Lowe's ratio test (d1/d2 < threshold) before RANSAC significantly
+reduces the number of false matches passed downstream. Skipping this step
+causes RANSAC to fail or produce poor homographies even with many raw matches.
+
+**Homography Direction is Critical**
+`findHomography(pts_a, pts_b)` returns H that maps image A to image B.
+`warpPerspective(img_b, M)` applies M as the inverse map. Getting this
+direction wrong — passing H instead of H_inv, or vice versa — produces
+completely incorrect warps, which was a key debugging lesson in this project.
+
+**Planar Homography Cannot Handle Parallax**
+A single 3x3 homography assumes the scene is planar or the camera rotates
+about its optical centre. When the camera translates laterally (as with phone
+panoramas), parallax causes misalignment that no homography can fully
+correct. Cylindrical projection solves this for rotational shots.
+
+**Cylindrical Projection Removes Trapezoid Distortion**
+Projecting both images onto a virtual cylinder before matching converts
+rotational camera movement into pure horizontal translation. This eliminates
+the trapezoidal warping that appears when a planar homography is applied
+directly to wide-angle images taken from different positions.
+
+**Seam Blending is Not Optional**
+A hard cut at the overlap boundary is always visible regardless of how
+accurate the alignment is. A cosine-gradient or Laplacian pyramid blend
+across the full overlap width is necessary to produce a seamless output,
+particularly where exposure or colour differs between frames.
+
+**Image Resolution Affects Everything**
+High-resolution phone photos (12MP+) cause memory issues and slow RANSAC
+significantly. Downscaling to a maximum dimension of 1600px before processing
+dramatically improves speed with no meaningful loss in stitching accuracy,
+because feature matching does not require full resolution.
+
+**Modular Design Enables Debugging**
+Separating the pipeline into discrete modules — extractor, matcher, estimator,
+warper, blender — made it possible to isolate and fix bugs at each stage
+independently. This is far more practical than a monolithic stitching function.
 
 ---
 
-## ✨ Features
-
-| Stage | What It Does |
-|-------|--------------|
-| 🧩 **Feature Extraction** | SURF (fast, illumination-robust) with auto-fallback to SIFT |
-| 🔭 **Scale Adaptivity** | Multi-octave Gaussian pyramid for robust detection across zoom levels |
-| 🔗 **Feature Matching** | Brute-Force or FLANN with Lowe's ratio test (configurable threshold) |
-| 🎯 **Outlier Rejection** | RANSAC homography estimation with inlier ratio filtering |
-| 🖼️ **Perspective Warping** | Automatic canvas sizing with black-border cropping |
-| 🎨 **Seam Blending** | Feather (Gaussian) or multi-band Laplacian pyramid blending |
-| 🛠️ **Debug Mode** | Saves keypoint visualisations and match overlays to disk |
-| 📐 **Auto Resize** | Downscales large phone photos before processing to prevent OOM |
-
----
-
-## 🖼️ Sample Inputs & Output
-
-### 📥 Input Images
-> Two overlapping images placed in the `samples/` folder, captured with ~40% overlap.
+## Project Structure
 
 ```
-samples/
-├── img1.jpg        ← left image  (query)
-└── img2.jpg        ← right image (train)
+Multi-Scale-Feature-Detection-OpenCV/
+|
+|-- samples/                        Input images for stitching
+|   |-- IMG_1813.jpg
+|   `-- IMG_1814.jpg
+|
+|-- src/                            Core library modules
+|   |-- __init__.py
+|   |-- feature_extractor.py        SIFT / SURF multi-scale keypoint detection
+|   |-- feature_matcher.py          BF / FLANN descriptor matching + ratio test
+|   |-- homography_estimator.py     RANSAC homography estimation
+|   |-- warper_blender.py           Cylindrical warp + feather / multiband blend
+|   `-- stitcher.py                 Pipeline orchestrator + OpenCV wrapper
+|
+|-- stitch.py                       Command-line entry point
+|-- panorama.jpg                    Sample output panorama
+|-- requirements.txt                Python dependencies
+|-- .gitignore
+`-- README.md
+```
+---
+
+## Input Images
+
+Place your images inside the `samples` folder before running the script.
+
+**Folder layout:**
+
+```
+E:\Opencv project\
+|-- samples\
+|   |-- img1.jpg        <- left image  (shot first)
+|   `-- img2.jpg        <- right image (shot second)
+|-- src\
+|-- stitch.py
 ```
 
-| Image 1 — Left | Image 2 — Right |
-|----------------|-----------------|
-| ![img1](samples/img1.jpg) | ![img2](samples/img2.jpg) |
+**File naming rules:**
+
+Images inside `samples` are loaded in alphabetical order, so the
+left-side image must come first alphabetically.
+
+| Naming example | Load order |
+|---|---|
+| `img1.jpg`, `img2.jpg` | img1 first — correct |
+| `IMG_1813.jpg`, `IMG_1814.jpg` | IMG_1813 first — correct |
+| `left.jpg`, `right.jpg` | left first — correct |
+| `b.jpg`, `a.jpg` | b loaded before a — wrong, rename or pass manually |
+
+Any common image format is accepted: `.jpg`, `.jpeg`, `.png`, `.bmp`, `.tiff`
+
+**To pass images in a specific order** instead of relying on alphabetical sorting:
 
 ```bash
-# Command used
-python stitch.py --input samples/img1.jpg samples/img2.jpg --output assets/panorama.jpg --debug
+python stitch.py --input samples\right.jpg samples\left.jpg --output panorama.jpg
+```
+
+**Debug output files** are saved in the same folder as `--output` when
+`--debug` is passed:
+
+```
+E:\Opencv project\
+|-- debug_keypoints_1.jpg    Keypoints detected on image 1
+|-- debug_keypoints_2.jpg    Keypoints detected on image 2
+|-- debug_matches.jpg        Matched keypoint pairs side by side
+`-- panorama.jpg             Final stitched output
 ```
 
 ---
 
-### 🔑 Keypoint Detection
-> SIFT keypoints detected on both images — scale and orientation visualised (via `--debug`)
+## Requirements
 
-| Image 1 Keypoints | Image 2 Keypoints |
-|-------------------|-------------------|
-| ![kp0](assets/debug_kp0.jpg) | ![kp1](assets/debug_kp1.jpg) |
-
----
-
-### 🔗 Feature Match Visualisation
-> Lowe's ratio-filtered matches between Image 1 and Image 2
-
-![matches](assets/debug_matches.jpg)
-
----
-
-### 🌄 Final Stitched Output
-
-![panorama](assets/panorama.jpg)
-
-> **Pipeline stats:**
-> ```
-> Images in    : 2  (img1.jpg + img2.jpg)
-> Algorithm    : SIFT
-> Keypoints    : 1,842  (img1)  |  1,756  (img2)
-> Good matches : 312
-> Inliers      : 278  (89.1%)
-> Time         : 2.4s
-> Output       : panorama.jpg  (3840×1080 px)
-> ```
-
----
-
-## 🏗️ Project Structure
-
-```
-multi-scale-feature-detection/
-│
-├── 📁 src/
-│   ├── __init__.py               # Public API exports
-│   ├── feature_extractor.py      # SURF / SIFT multi-scale extraction
-│   ├── feature_matcher.py        # BF / FLANN + Lowe's ratio test
-│   ├── homography_estimator.py   # RANSAC homography estimation
-│   ├── warper_blender.py         # Perspective warp + feather/multiband blend
-│   └── stitcher.py               # End-to-end orchestration pipeline
-│
-├── 📁 tests/
-│   └── test_pipeline.py          # pytest unit + integration tests
-│
-├── 📁 samples/                   # Place your input images here
-├── 📁 assets/                    # Output images for README display
-│
-├── stitch.py                     # 🚀 CLI entry point
-├── requirements.txt              # Python dependencies
-└── README.md
-```
-
----
-
-## ⚙️ Installation
-
-### Prerequisites
-
-- Python **3.8+**
+- Python 3.8 or higher
 - pip
 
-### 1️⃣ Clone the repository
+| Package | Version | Purpose |
+|---|---|---|
+| `opencv-python` | >= 4.8 | Core computer vision |
+| `numpy` | >= 1.24 | Array operations |
+| `pytest` | >= 7.4 | Unit testing (optional) |
+
+> **SURF support:** SURF is a patented algorithm and requires the non-free
+> OpenCV modules. Install `opencv-contrib-python` instead of `opencv-python`
+> if you need SURF. SIFT is used automatically as the default (open-source
+> since OpenCV 4.4).
+
+---
+
+## Installation
+
+**1. Clone the repository**
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/multi-scale-feature-detection.git
-cd multi-scale-feature-detection
+git clone https://github.com/<your-username>/Multi-Scale-Feature-Detection-OpenCV.git
+cd Multi-Scale-Feature-Detection-OpenCV
 ```
 
-### 2️⃣ Install dependencies
+**2. Create and activate a virtual environment**
+
+```bash
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# macOS / Linux
+python3 -m venv venv
+source venv/bin/activate
+```
+
+**3. Install dependencies**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3️⃣ (Optional) Enable SURF support
-
-SURF is a **patented algorithm** and requires the non-free OpenCV modules:
-
-```bash
-pip uninstall opencv-python
-pip install opencv-contrib-python>=4.8.0
-```
-
-> ℹ️ If SURF is unavailable, the pipeline automatically falls back to **SIFT** (open-source since OpenCV 4.4+).
-
 ---
 
-## 🚀 Quick Start
+## Usage
+
+### Command-line interface
 
 ```bash
-# Stitch all images in a folder
-python stitch.py --input ./samples --output panorama.jpg
-
-# Stitch specific files
-python stitch.py --input img_left.jpg img_centre.jpg img_right.jpg --output panorama.jpg
-
-# OpenCV built-in stitcher (recommended for phone photos)
+# Stitch all images in the samples folder (recommended default)
 python stitch.py --input ./samples --output panorama.jpg --mode opencv
 
-# High-quality multi-band blending
-python stitch.py --input ./samples --output panorama.jpg --mode custom --blend multiband
+# Stitch specific files using the custom SIFT+RANSAC pipeline
+python stitch.py --input samples/IMG_1813.jpg samples/IMG_1814.jpg \
+                 --output panorama.jpg --mode custom
 
-# Debug mode — saves keypoint + match visualisations
+# Enable debug output (saves keypoint and match visualisations)
 python stitch.py --input ./samples --output panorama.jpg --debug
+
+# High-quality multi-band seam blending
+python stitch.py --input ./samples --output panorama.jpg \
+                 --mode custom --blend multiband
 ```
 
----
-
-## 🖥️ CLI Reference
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--input` | *(required)* | Image file(s) or folder path |
-| `--output` | `panorama.jpg` | Output file path |
-| `--mode` | `opencv` | `opencv` (built-in) or `custom` (SIFT+RANSAC) |
-| `--algorithm` | `AUTO` | `SURF`, `SIFT`, or `AUTO` |
-| `--hessian-threshold` | `300` | SURF detector sensitivity (lower → more keypoints) |
-| `--matcher` | `BF` | `BF` (brute-force) or `FLANN` (approximate, faster) |
-| `--ratio-threshold` | `0.70` | Lowe's ratio test — lower is stricter |
-| `--reproj-threshold` | `4.0` | RANSAC reprojection error threshold (pixels) |
-| `--blend` | `feather` | `feather` (faster) or `multiband` (better seams) |
-| `--feather-sigma` | `30.0` | Gaussian sigma for feather blending |
-| `--pyramid-levels` | `4` | Laplacian pyramid levels for multi-band blending |
-| `--max-input-dim` | `1600` | Resize input so largest dimension ≤ this (0 = off) |
-| `--debug` | off | Save keypoint + match visualisation images |
-| `--quiet` | off | Suppress all progress output |
-
----
-
-## 🐍 Python API
-
-### Basic usage
+### Python library
 
 ```python
 import cv2
-from src import PanoramaStitcher, StitchConfig
+from src.stitcher import PanoramaStitcher, StitchConfig
 
-images = [cv2.imread(f) for f in ["left.jpg", "centre.jpg", "right.jpg"]]
-
+# Default usage — auto-selects SIFT, feather blending
 stitcher = PanoramaStitcher()
-panorama, report = stitcher.stitch(images)
+images   = [cv2.imread("samples/IMG_1813.jpg"),
+            cv2.imread("samples/IMG_1814.jpg")]
 
-print(f"Success  : {report.success}")
-print(f"Algorithm: {report.algorithm_used}")
+panorama, report = stitcher.stitch(images)
 cv2.imwrite("panorama.jpg", panorama)
+print(report.message)   # "Stitched 2/2 images"
 ```
 
 ### Custom configuration
 
 ```python
+from src.stitcher import PanoramaStitcher, StitchConfig
+
 config = StitchConfig(
-    algorithm="SIFT",
-    hessian_threshold=300,
-    ratio_threshold=0.72,
-    reproj_threshold=4.0,
-    blend_method="multiband",
-    pyramid_levels=5,
-    max_input_dim=1200,
+    algorithm        = "SIFT",
+    ratio_threshold  = 0.72,       # stricter Lowe ratio test
+    reproj_threshold = 4.0,        # tighter RANSAC inlier threshold
+    blend_method     = "multiband",
+    pyramid_levels   = 5,
+    max_input_dim    = 1600,       # downscale large phone photos first
 )
-stitcher = PanoramaStitcher(config=config, verbose=True)
+stitcher = PanoramaStitcher(config=config)
 panorama, report = stitcher.stitch(images)
 ```
 
-### Use individual components independently
+### Component-level access
 
 ```python
-from src import (
-    ScaleAdaptiveFeatureExtractor,
-    FeatureMatcher,
-    RANSACHomographyEstimator,
-)
+from src.feature_extractor    import ScaleAdaptiveFeatureExtractor
+from src.feature_matcher      import FeatureMatcher
+from src.homography_estimator import RANSACHomographyEstimator
 
-extractor    = ScaleAdaptiveFeatureExtractor(algorithm="AUTO")
-matcher      = FeatureMatcher(method="BF", ratio_threshold=0.75)
-ransac       = RANSACHomographyEstimator(reproj_threshold=5.0)
+extractor = ScaleAdaptiveFeatureExtractor(algorithm="SIFT")
+matcher   = FeatureMatcher(method="BF", ratio_threshold=0.75)
+ransac    = RANSACHomographyEstimator(reproj_threshold=4.0)
 
 feat_a       = extractor.extract(img_a)
 feat_b       = extractor.extract(img_b)
 match_result = matcher.match(feat_a, feat_b)
 hom_result   = ransac.estimate(match_result)
 
-print(f"Keypoints A : {len(feat_a.keypoints)}")
-print(f"Good matches: {len(match_result.good_matches)}")
-print(f"Inliers     : {hom_result.n_inliers} ({hom_result.inlier_ratio:.1%})")
+print(f"Keypoints  : {len(feat_a.keypoints)} / {len(feat_b.keypoints)}")
+print(f"Matches    : {len(match_result.good_matches)}")
+print(f"Inliers    : {hom_result.n_inliers} ({hom_result.inlier_ratio:.1%})")
+print(f"Homography :\n{hom_result.H}")
 ```
 
 ---
 
-## 🔬 Algorithm Deep Dive
-
-### Pipeline Overview
+## Pipeline Architecture
 
 ```
-  📷 Input Images
-        │
-        ▼
-  ┌─────────────────────────┐
-  │   Scale-Adaptive         │  SURF (Hessian detector)
-  │   Feature Extraction     │  or SIFT (DoG detector)
-  │   (Multi-octave pyramid) │  → keypoints + 64/128-d descriptors
-  └────────────┬────────────┘
-               │
-               ▼
-  ┌─────────────────────────┐
-  │   Feature Matching       │  BF or FLANN k-NN (k=2)
-  │   + Lowe's Ratio Test    │  → filters ambiguous matches
-  └────────────┬────────────┘
-               │
-               ▼
-  ┌─────────────────────────┐
-  │   RANSAC Homography      │  Estimates 3×3 H matrix
-  │   Estimation             │  → rejects geometric outliers
-  └────────────┬────────────┘
-               │
-               ▼
-  ┌─────────────────────────┐
-  │   Perspective Warping    │  warpPerspective with auto
-  │   + Canvas Sizing        │  canvas expansion & OOM guard
-  └────────────┬────────────┘
-               │
-               ▼
-  ┌─────────────────────────┐
-  │   Seam Blending          │  Feather (Gaussian weighted)
-  │                          │  or Multi-band (Laplacian pyramid)
-  └────────────┬────────────┘
-               │
-               ▼
-         🌄 Panorama Output
+Input Images
+     |
+     v
+[ Cylindrical Projection ]        Removes perspective distortion
+     |                            before feature matching
+     v
+[ Multi-Scale Feature Extraction ]
+  SIFT  : 128-dim descriptor, scale + rotation invariant
+  SURF  : 64-dim descriptor, faster, illumination robust
+  Scale space: multi-octave Gaussian pyramid
+     |
+     v
+[ Descriptor Matching ]
+  Method  : Brute-Force (exact) or FLANN (approximate)
+  Filter  : Lowe's ratio test  d1 / d2 < threshold
+     |
+     v
+[ RANSAC Homography Estimation ]
+  Randomly sample 4 correspondences
+  Fit candidate homography H
+  Score inliers: reprojection error < T pixels
+  Refine H on full inlier consensus set
+     |
+     v
+[ Perspective Warp ]
+  Apply H_inv via warpPerspective
+  Auto-sized canvas with translation offset
+     |
+     v
+[ Seam Blending ]
+  Feather  : Cosine-gradient alpha blend across overlap
+  Multiband: Laplacian pyramid blend for high quality
+     |
+     v
+[ Rectangular Crop ]
+  Remove black borders from cylindrical distortion
+     |
+     v
+Panoramic Output Image
 ```
 
-### 🧬 SURF vs SIFT
-
-| Property | SURF | SIFT |
-|----------|------|------|
-| ⚡ Speed | Faster (integral images) | Slower (DoG pyramid) |
-| 📐 Scale invariant | ✅ | ✅ |
-| 🔄 Rotation invariant | ✅ | ✅ |
-| 💡 Illumination robust | ✅ Strong | ✅ Good |
-| 📜 Licence | Non-free (patented) | Open (since OpenCV 4.4) |
-| 📏 Descriptor size | 64 floats | 128 floats |
-
 ---
 
-## 🧪 Running Tests
+## Algorithm Details
 
-```bash
-pip install pytest
-pytest tests/ -v
+### Multi-Scale Feature Detection
 
-# With coverage
-pip install pytest-cov
-pytest tests/ --cov=src --cov-report=term-missing
+Both SIFT and SURF detect keypoints across multiple scales using a Gaussian
+scale-space pyramid, making them invariant to zoom, rotation, and moderate
+illumination changes.
+
+| Property | SIFT | SURF |
+|---|---|---|
+| Descriptor size | 128 floats | 64 floats |
+| Scale invariant | Yes | Yes |
+| Rotation invariant | Yes | Yes |
+| Illumination robust | Good | Strong |
+| Speed | Moderate | Fast |
+| Licence | Open (OpenCV 4.4+) | Non-free (patent) |
+
+### Lowe's Ratio Test
+
+For each keypoint, the two nearest descriptor matches are found. A match is
+accepted only if the closest distance is significantly smaller than the
+second-closest:
+
+```
+match accepted  if  d1 / d2 < ratio_threshold
 ```
 
-**Coverage includes:**
-- ✅ Feature extractor — SIFT, AUTO fallback, grayscale input, invalid algorithm guard
-- ✅ Feature matcher — BF matching, empty descriptors, invalid method guard
-- ✅ RANSAC estimator — identity homography, too-few-matches failure path
-- ✅ Warper & blender — canvas sizing, feather blend, multi-band blend
-- ✅ Full pipeline — single image passthrough, two-image stitch, custom config
+A threshold of 0.70 to 0.75 retains good matches while discarding ambiguous ones.
+
+### RANSAC Homography Estimation
+
+```
+Initialise: N points, K iterations, T threshold, d minimum inliers
+
+Repeat K times:
+    Sample 4 random correspondences
+    Compute candidate homography H
+    Count inliers: reprojection_error(H, pt) < T
+    Update best H if inlier count improves
+
+Refine: recompute H using all inliers of best model
+Output: H, inlier mask
+```
+
+A planar homography has 8 degrees of freedom, requiring a minimum of 4 point
+correspondences to solve.
+
+### Cylindrical Projection
+
+Before stitching, each image is mapped onto a virtual cylinder of focal
+length `f`. This converts rotational camera motion into pure horizontal
+translation, eliminating the trapezoid distortion produced by a flat
+homography when images are taken from different positions.
+
+```
+x_cylinder = f * arctan(x_plane / f)
+y_cylinder = f * y_plane / sqrt(x_plane^2 + f^2)
+```
 
 ---
 
-## 💡 Tips for Best Results
+## CLI Reference
 
-| Tip | Details |
-|-----|---------|
-| 📐 **Overlap** | Consecutive images should overlap by **30–50%** |
-| 💡 **Exposure** | Keep consistent exposure and white balance across all shots |
-| 🎯 **Camera motion** | Rotate around the nodal point — avoid lateral translation |
-| ↔️ **Ordering** | Pass images left-to-right (or top-to-bottom) in capture order |
-| 🔧 **Tuning** | Stitching failed? Lower `--hessian-threshold` or raise `--ratio-threshold` |
-| 📱 **Phone photos** | Use `--mode opencv` — handles bundle adjustment and parallax |
-| 🐛 **Debugging** | Use `--debug` to inspect keypoint and match quality visually |
+| Flag | Default | Description |
+|---|---|---|
+| `--input` | required | Image file(s) or folder path |
+| `--output` | `panorama.jpg` | Output panorama file path |
+| `--mode` | `opencv` | `opencv` or `custom` |
+| `--algorithm` | `AUTO` | `SIFT`, `SURF`, or `AUTO` |
+| `--hessian-threshold` | `300` | SURF Hessian detector threshold |
+| `--matcher` | `BF` | `BF` (brute-force) or `FLANN` |
+| `--ratio-threshold` | `0.70` | Lowe's ratio test cutoff |
+| `--reproj-threshold` | `4.0` | RANSAC reprojection error (px) |
+| `--blend` | `feather` | `feather` or `multiband` |
+| `--feather-sigma` | `30.0` | Gaussian sigma for feather blend |
+| `--pyramid-levels` | `4` | Laplacian pyramid levels |
+| `--max-input-dim` | `1600` | Max image dimension before processing |
+| `--debug` | off | Save keypoint and match debug images |
+| `--quiet` | off | Suppress progress output |
 
 ---
 
-## 📄 License
+## Configuration
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+The `StitchConfig` dataclass exposes all tunable parameters:
+
+```python
+@dataclass
+class StitchConfig:
+    algorithm         : str   = "AUTO"    # SIFT | SURF | AUTO
+    hessian_threshold : int   = 300       # SURF only
+    n_octaves         : int   = 4         # pyramid octaves
+    n_octave_layers   : int   = 3         # layers per octave
+    matcher_method    : str   = "BF"      # BF | FLANN
+    ratio_threshold   : float = 0.70      # Lowe ratio test
+    reproj_threshold  : float = 4.0       # RANSAC pixel threshold
+    ransac_confidence : float = 0.995
+    ransac_max_iters  : int   = 3000
+    min_inlier_ratio  : float = 0.20      # minimum accepted inlier fraction
+    blend_method      : str   = "feather" # feather | multiband
+    feather_sigma     : float = 30.0
+    pyramid_levels    : int   = 4
+    max_input_dim     : int   = 1600      # 0 = no resize
+```
 
 ---
 
-<div align="center">
+## Shooting Tips
 
-Made with ❤️ using Python & OpenCV
+To get the best results from this pipeline:
 
-⭐ **If this project helped you, consider giving it a star!**
+- Maintain at least 30 to 50 percent overlap between consecutive frames.
+- Keep camera exposure and white balance consistent across all shots.
+- Rotate the camera around a fixed point rather than translating sideways.
+  Parallax from lateral movement cannot be fully corrected by a single homography.
+- Pass images to `--input` in left-to-right capture order.
+- If stitching fails, lower `--hessian-threshold` to detect more keypoints,
+  or raise `--ratio-threshold` to accept more matches.
 
-</div>
+---
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
