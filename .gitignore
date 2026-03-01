@@ -1,0 +1,161 @@
+# ============================================================
+#  .gitignore — Multi-Scale Feature Detection & Matching
+# ============================================================
+
+# ---------------------------
+# 🐍 Python
+# ---------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.pyo
+*.pyd
+
+# ---------------------------
+# 📦 Virtual Environments
+# ---------------------------
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# ---------------------------
+# 🧪 Testing & Coverage
+# ---------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.coveragerc
+nosetests.xml
+test-results/
+.tox/
+
+# ---------------------------
+# 🖼️ Output & Debug Images
+# ---------------------------
+panorama.jpg
+panorama.png
+debug_kp0.jpg
+debug_kp1.jpg
+debug_matches.jpg
+output/
+outputs/
+results/
+*.output.jpg
+*.output.png
+
+# ---------------------------
+# 📁 Sample / Input Images
+#    (add your own test images
+#     but don't commit large files)
+# ---------------------------
+samples/*.jpg
+samples/*.jpeg
+samples/*.png
+samples/*.bmp
+samples/*.tiff
+samples/*.tif
+# To track a specific sample: git add -f samples/example.jpg
+
+# ---------------------------
+# 🔬 Jupyter Notebooks
+# ---------------------------
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+*.ipynb
+
+# ---------------------------
+# 📓 IDEs & Editors
+# ---------------------------
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm / JetBrains
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Spyder
+.spyderproject.cfg
+.spyproject
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
+\#*\#
+.#*
+
+# ---------------------------
+# 💻 OS Files
+# ---------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ---------------------------
+# 📊 Logs & Temp Files
+# ---------------------------
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+logs/
+tmp/
+
+# ---------------------------
+# 📦 Package Managers
+# ---------------------------
+pip-log.txt
+pip-delete-this-directory.txt
+.pip/
+
+# ---------------------------
+# 🔑 Secrets & Credentials
+# ---------------------------
+.env.local
+.env.*.local
+secrets.yaml
+secrets.json
+*.pem
+*.key

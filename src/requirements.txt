@@ -1,0 +1,10 @@
+# Core
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# For SURF support (non-free algorithms).
+# Uncomment the line below and comment out opencv-python above if you need SURF:
+# opencv-contrib-python>=4.8.0
+
+# Development / testing
+pytest>=7.4.0
