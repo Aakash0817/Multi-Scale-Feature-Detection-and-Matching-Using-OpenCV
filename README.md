@@ -76,52 +76,55 @@ The custom pipeline exposes every stage — feature extraction, matching, homogr
 
 ## 🖼️ Sample Inputs & Output
 
-### Input Images
-> Place your images in the `samples/` folder. Images should overlap by at least 30–50%.
+### 📥 Input Images
+> Two overlapping images placed in the `samples/` folder, captured with ~40% overlap.
 
 ```
 samples/
-├── left.jpg        ← leftmost image
-├── centre.jpg      ← middle image
-└── right.jpg       ← rightmost image
+├── img1.jpg        ← left image  (query)
+└── img2.jpg        ← right image (train)
 ```
 
-<!-- Replace the paths below with your actual screenshots once you run the pipeline -->
+| Image 1 — Left | Image 2 — Right |
+|----------------|-----------------|
+| ![img1](samples/img1.jpg) | ![img2](samples/img2.jpg) |
 
-| Left | Centre | Right |
-|------|--------|-------|
-| ![left](samples/left.jpg) | ![centre](samples/centre.jpg) | ![right](samples/right.jpg) |
+```bash
+# Command used
+python stitch.py --input samples/img1.jpg samples/img2.jpg --output assets/panorama.jpg --debug
+```
 
 ---
 
-### 🔑 Keypoint Detection Output
-> Detected SIFT keypoints visualised with scale and orientation (run with `--debug`)
+### 🔑 Keypoint Detection
+> SIFT keypoints detected on both images — scale and orientation visualised (via `--debug`)
 
-| Image A Keypoints | Image B Keypoints |
+| Image 1 Keypoints | Image 2 Keypoints |
 |-------------------|-------------------|
 | ![kp0](assets/debug_kp0.jpg) | ![kp1](assets/debug_kp1.jpg) |
 
 ---
 
 ### 🔗 Feature Match Visualisation
-> Lowe's ratio-filtered matches between two overlapping images
+> Lowe's ratio-filtered matches between Image 1 and Image 2
 
 ![matches](assets/debug_matches.jpg)
 
 ---
 
-### 🌄 Final Panorama Output
+### 🌄 Final Stitched Output
 
 ![panorama](assets/panorama.jpg)
 
-> **Pipeline stats example:**
+> **Pipeline stats:**
 > ```
-> Algorithm  : SIFT
-> Keypoints  : 1,842  (img_a)  |  1,756  (img_b)
-> Good matches: 312
-> Inliers    : 278  (89.1%)
-> Time       : 2.4s
-> Output     : panorama.jpg  (4320×1080 px)
+> Images in    : 2  (img1.jpg + img2.jpg)
+> Algorithm    : SIFT
+> Keypoints    : 1,842  (img1)  |  1,756  (img2)
+> Good matches : 312
+> Inliers      : 278  (89.1%)
+> Time         : 2.4s
+> Output       : panorama.jpg  (3840×1080 px)
 > ```
 
 ---
